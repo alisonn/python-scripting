@@ -1,54 +1,63 @@
-#! /usr/bin/env python 
+#!/usr/bin/env python 
+#  
+# Alison Hanh Nguyen: alisonn@berkeley.edu 
+# Bachtrog Lab at UCBerkeley  
+#
+# FILTER_LONGEST: Takes in Trinity.fasta headers (must create a separate file) 
+# and returns genes/contigs with their longest isoform in a .txt file. 
+#
+# Useful for filtering through many Trinity isoforms
+#
 
-## FILTER_LONGEST:  @param: temp.txt file containing only fasta headers from Trinity 
-## @return: unique genes/contigs with longest isoform only in Trinity format
-inputFile="/home/alisonn/01_assemblies/temp.txt"
+inputFile = "/home/alisonn/01_assemblies/temp.txt"
 
-## initiated nested dictionary: gene --> length --> associated isoform  
-dict = {}; 
+# initiated nested repositionary: gene --> length --> associated isoform  
+reposit = {}
 
-## first open the file 
+# first open the file 
 f = open(inputFile)
 
-## read the first line of the fasta header file 
+# read the first line of the fasta header file 
 line = f.readline() 
 
-## while file is not empty, keep reading line by line until file (i.e. line) is empty
+# while file is not empty, keep reading line by line until file (i.e. line) is empty
 while line: 		
 		
-	## parse the fasta header to get only a unique gene name 
-	tempGene = line.split()[0][1:] ## cut off ">" in fasta headers
-	currGene = tempGene.split('_')[0]+"_"+tempGene.split('_')[1] ## retrieves TR*{0-9}|c0_g*{0-9}
-	currIsoform = tempGene.split('_')[2] ## retrieves "i*{0-9}"
-	currLength = line.split()[1][4:] ## takes "len=INT" and retrieves INT
-
+	# parse the fasta header to get only a unique gene name 
+	header = line[1:] # cut off > in headers
+	splitHeader = header.split() #"TRfdfdfd|fdf_fdfd_fdf /split/ len=INT" 
+	currLength = int(splitHeader[1][4:]) # takes "len=INT" and retrieves casted INT
 	
-	## if gene does not exist, add it and add length and assoc isoform
-	if not (currGene in dict):
-		dict[currGene]={}
-		dict[currGene][currLength]=currIsoform					
+	tempGene = splitHeader[0]
+	splitGene = tempGene.split('_')
+	currGene = splitGene[0]+"_"+splitGene[1] # retrieves TR*{0-9}|c0_g*{0-9}
+	currIsoform = splitGene[2] # retrieves "i*{0-9}"	
+	
+	# if gene does not exist, add it and add length and assoc isoform
+	if currGene not in reposit:
+		reposit[currGene] = {}
+		reposit[currGene][currLength] = currIsoform					
 		
-	## if gene already exists, compare sequence lengths
-	else : 
-		## if new isoform length is longer than one in dictionary, replace
-		for storedLength in dict[currGene]:		
+	# if gene exists, compare sequence lengths
+	else: 		
+		# if new isoform length is longer than one in repositionary, replace
+		for storedLength in reposit[currGene]:		
 			if (currLength > storedLength):
-				dict[currGene].popitem() ## pop the only item 
-				dict[currGene][currLength] = currIsoform ## add new value :-) ## 
+				reposit[currGene].popitem() # pop the only item 
+				reposit[currGene][currLength] = currIsoform # add new value :-) # 
 				
-	line = f.readline() ## get the next line, ahh you infinite loop.
+	line = f.readline() # get the next line, ahh you infinite loop.
 
-## wahoo! we've reached the end of the file 	
+# wahoo! we've reached the end of the file 	
 f.close()
 
 
-## write to a file called "outputList.txt" in current directory
+# write to a file called "outputList.txt" in current directory
+f = open('outputList.txt', 'w')
 
-contig="" 
-f=open('outputList.txt', 'w')
-for gene, value in dict.iteritems():
-	for length in dict[gene]: 
-		contig=gene+"_"+dict[gene][length]
-		print contig
+for gene, value in reposit.iteritems():
+	for length, isoform in reposit[gene]: 
+		contig = gene+"_"+reposit[gene][length]
 		f.write(contig+'\n')
+		
 f.close()
