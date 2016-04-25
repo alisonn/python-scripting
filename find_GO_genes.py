@@ -6,6 +6,7 @@
 # (key = gene/transcript, value = pval, qval, bval)
 
 import sys
+import re
 
 # prompt for genes to look in dictionary
 # @param string of genes separated by spaces
@@ -25,31 +26,65 @@ def updateRepos(fileName):
         # parse each line at a time
         parsed = line.split()
         name = parsed[0]
-        pval = float(parsed[1])
-        qval = float(parsed[2])
-        sign = float(parsed[3])
-        values = (pval, qval, sign) 
-        # add to the dictionary and grab the next line
-        sleuth_repos[name] = values
-        line = sf.readline()
-    print "Dictionary fully loaded with genes and associated values! :-)" 
+        # TODO CHECK THIS FOR VALUES OF NA - Insignificant transcripts
+        pval = parsed[1]
+        if pval != "NA":
+            pval = float(pval)
+            qval = float(parsed[2])
+            sign = float(parsed[3])
+            values = (pval, qval, sign) 
+            # add to the dictionary and grab the next line
+            sleuth_repos[name] = values
+            line = sf.readline()
+        # If we hit NA values, then we are at end of significant transcripts
+        else: 
+            print "Dictionary fully loaded with genes and associated significant values! :-)" 
+            break 
+    return sleuth_repos
 
 # prompt for sleuth file to use
 # @param sleuth file to open
 # @return nothing, dictionary is updated with sleuth file
 def getSleuth():
     sleuth_file = raw_input("Input python-compatible sleuth results file: ")
-    updateRepos(sleuth_file)
+    return updateRepos(sleuth_file)
 
-def retrieveQuery(sleuth_repos, query)
+def retrieveQuery(sleuth_repos, query):
     geneList =  query.split(',')
-    # check for loop syntax ...
-    for i in 0 to length(geneList-1):
-        currVal = sleuth_repos[geneList[i]]
-        if currVal[0] > 0.05:
-            if currVal[2] > 0: 
-                # write it is downreg in winter
-            else:
-                #write that it is upreg in winter
-        #done
-    print "Done with processing your query."
+    p_threshold = 0.05
+
+    # check that the gene/transcript exists
+    for i in xrange(len(geneList)):
+        if currGene in sleuth_repos:
+            currGene = geneList[i]
+            currVal = sleuth_repos[geneList[i]]
+            if currVal[0] <= p_threshold:
+                if currVal[2] < 0: 
+                    print currGene + " is down-regulated in starvation condition."
+                else:
+                    print currGene + " is up-regulated in stavartion condition."
+        else: 
+            print currGene + " was not found or was not significant."
+
+    print "Done with processing your query!"
+
+# interactive prompting for user input
+def main():
+    repository = {}
+
+    while True:
+        # What do you want to do?
+        print "What do you want to do?"
+        choice = raw_input("S: load dictionary Q: query search or X: exit... ")
+        if choice == "S":
+            repository = getSleuth()
+        elif choice == "Q" and bool(repository):
+            query = getQuery()
+            retrieveQuery(repository, query)
+        elif choice == "X":     
+            # deal with this later
+            print "Okay, closing gene finder."
+            break
+# close
+
+main()
