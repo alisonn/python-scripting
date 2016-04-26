@@ -54,12 +54,13 @@ def getFullQuery(sleuth_repos, query):
     # search in the dictionary keys all possible transcripts 
     parsedQueries = query.split(',')
     allGenes = sleuth_repos.keys()
-    for i in xrange(len(parsedQueries[i]))
+    fullQuery = []
+    for i in xrange(len(parsedQueries)):
         query = "^" + query
         for i in xrange(len(allGenes)):
             if re.search(query, allGenes[i]):
-                isoforms.add(allGenes[i])
-    return isoforms
+                fullQuery.append(allGenes[i])
+    return fullQuery
 
 def retrieveQuery(sleuth_repos, query):
     geneList =  query.split(',')
@@ -68,9 +69,9 @@ def retrieveQuery(sleuth_repos, query):
     # check that the gene/transcript exists
     # add support for regular expression
     for i in xrange(len(fullQuery)):
-        currGene = geneList[i]
+        currGene = fullQuery[i]
         if currGene in sleuth_repos:
-            currVal = sleuth_repos[geneList[i]]
+            currVal = sleuth_repos[fullQuery[i]]
             if currVal[0] <= p_threshold:
                 if currVal[2] < 0: 
                     print currGene + " is down-regulated in starvation condition."
