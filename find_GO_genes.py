@@ -26,7 +26,6 @@ def updateRepos(fileName):
         # parse each line at a time
         parsed = line.split()
         name = parsed[0]
-        # TODO CHECK THIS FOR VALUES OF NA - Insignificant transcripts
         pval = parsed[1]
         if pval != "NA":
             pval = float(pval)
@@ -49,20 +48,28 @@ def getSleuth():
     sleuth_file = raw_input("Input python-compatible sleuth results file: ")
     return updateRepos(sleuth_file)
 
+def getIsoforms(sleuth_repos, query):
+    # search in the dictionary keys all possible transcripts 
+    allGenes = sleuth_repos.keys()
+    query = "^" + query
+    for i in xrange(len(allGenes)):
+        re.search(query, allGenes[i])
+
 def retrieveQuery(sleuth_repos, query):
     geneList =  query.split(',')
     p_threshold = 0.05
 
     # check that the gene/transcript exists
+    # add support for regular expression
     for i in xrange(len(geneList)):
+        currGene = geneList[i]
         if currGene in sleuth_repos:
-            currGene = geneList[i]
             currVal = sleuth_repos[geneList[i]]
             if currVal[0] <= p_threshold:
                 if currVal[2] < 0: 
                     print currGene + " is down-regulated in starvation condition."
                 else:
-                    print currGene + " is up-regulated in stavartion condition."
+                    print currGene + " is up-regulated in starvation condition."
         else: 
             print currGene + " was not found or was not significant."
 
@@ -71,7 +78,6 @@ def retrieveQuery(sleuth_repos, query):
 # interactive prompting for user input
 def main():
     repository = {}
-
     while True:
         # What do you want to do?
         print "What do you want to do?"
@@ -79,12 +85,15 @@ def main():
         if choice == "S":
             repository = getSleuth()
         elif choice == "Q" and bool(repository):
-            query = getQuery()
+            query = str(getQuery())
             retrieveQuery(repository, query)
+        elif choice == "Q" and not bool(repository):
+            print "Sorry, no dictionary has been loaded."
         elif choice == "X":     
             # deal with this later
             print "Okay, closing gene finder."
             break
+        else:
+            print "Sorry, not an option."
 # close
-
 main()
