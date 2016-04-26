@@ -54,9 +54,9 @@ def getFullQuery(sleuth_repos, query):
     # search in the dictionary keys all possible transcripts 
     parsedQueries = query.split(',')
     allGenes = sleuth_repos.keys()
-    fullQuery = []
+    fullQuery = parsedQueries 
     for i in xrange(len(parsedQueries)):
-        query = "^" + query
+        query = "^" + parsedQueries[i] + "-"
         for i in xrange(len(allGenes)):
             if re.search(query, allGenes[i]):
                 fullQuery.append(allGenes[i])
