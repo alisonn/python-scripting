@@ -48,20 +48,26 @@ def getSleuth():
     sleuth_file = raw_input("Input python-compatible sleuth results file: ")
     return updateRepos(sleuth_file)
 
-def getIsoforms(sleuth_repos, query):
+# get all possible isoforms available in the dictionary for the current query
+# @return list of isoforms for queries
+def getFullQuery(sleuth_repos, query):
     # search in the dictionary keys all possible transcripts 
+    parsedQueries = query.split(',')
     allGenes = sleuth_repos.keys()
-    query = "^" + query
-    for i in xrange(len(allGenes)):
-        re.search(query, allGenes[i])
+    for i in xrange(len(parsedQueries[i]))
+        query = "^" + query
+        for i in xrange(len(allGenes)):
+            if re.search(query, allGenes[i]):
+                isoforms.add(allGenes[i])
+    return isoforms
 
 def retrieveQuery(sleuth_repos, query):
     geneList =  query.split(',')
+    fullQuery = getFullQuery(sleuth_repos,query)
     p_threshold = 0.05
-
     # check that the gene/transcript exists
     # add support for regular expression
-    for i in xrange(len(geneList)):
+    for i in xrange(len(fullQuery)):
         currGene = geneList[i]
         if currGene in sleuth_repos:
             currVal = sleuth_repos[geneList[i]]
