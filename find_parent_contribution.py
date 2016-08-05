@@ -51,15 +51,18 @@ loadVCF()
 
 ## load a GATK output file
 #def loadGATK():
-#    GATK_file = raw_input("Input the path to your GATK output file (.csv): ")
-#    return updateGATK(GATK_file)
+#    GATK_file_path = raw_input("Input the path to your GATK output file (.csv): ")
+#    return updateGATK(GATK_file_path)
 #
 ## update GATK dictionary 
-#def updateGATK():
+#def updateGATK(fileName):
+#    gatk = open(fileName)
 #    GATK_repos = {}
 #    # I think this is dictionary of chr --> dictionary [int --> tuple of ints? let's have default be the first parent 
 #    # written in the VCF file...]
-#    # PROCESS THE GATK FILE INTO DICTIONARY FORMAT
+#    while line:
+#        #process GATK line
+#        line = gatk.readline()
 #    return GATK_repos
 #
 ## get the user's query
