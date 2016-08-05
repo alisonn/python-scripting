@@ -65,9 +65,12 @@ def getFullQuery(sleuth_repos, query):
 def retrieveQuery(sleuth_repos, query):
     geneList =  query.split(',')
     fullQuery = getFullQuery(sleuth_repos,query)
+    # support for quick 2x2 tables
+    total_down = 0
+    total_up = 0
+    
     p_threshold = 0.05
     # check that the gene/transcript exists
-    # add support for regular expression
     for i in xrange(len(fullQuery)):
         currGene = fullQuery[i]
         if currGene in sleuth_repos:
@@ -75,12 +78,16 @@ def retrieveQuery(sleuth_repos, query):
             if currVal[0] <= p_threshold:
                 if currVal[2] < 0: 
                     print currGene + " is down-regulated in starvation condition."
+                    total_down += 1
                 else:
                     print currGene + " is up-regulated in starvation condition."
+                    total_up += 1
         else: 
             print currGene + " was not found or was not significant."
 
     print "Done with processing your query!"
+    print "Total down-regulated (all isoforms): " + str(total_down)
+    print "Total up-regulated (all isoforms): " + str(total_up)
 
 # interactive prompting for user input
 def main():
