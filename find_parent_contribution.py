@@ -16,38 +16,42 @@ def loadVCF():
 # @param: path to vcf file
 # @return: a dictionary containing chr, pos, and par genotypes
 def updateVCF(fileName):
+    vcf_repos = {}
 
-    #initiate a dictionary of dictionaries (tuple --> tuple)
-    vcf_repos = {} 
-    vcf = open(fileName)
-    line = vcf.readline()
+    try:
+        #initiate a dictionary of dictionaries (tuple --> tuple)
+        vcf = open(fileName)
+        line = vcf.readline()
 
-    # populate the dictionary with parent-SNP information
-    while line:
+        # populate the dictionary with parent-SNP information
+        while line:
 
-        if line[0] == "c":
-            # the line contains information about SNPs at particular sites - so process
-            # I just want to know if parent is ref or alt easily
-            parsed = line.split()
-            currChr = parsed[0]
-            currSite = parsed[1]
-            currPos = (currChr, currSite)
+            if line[0] == "c":
+                # the line contains information about SNPs at particular sites - so process
+                # I just want to know if parent is ref or alt easily
+                parsed = line.split()
+                currChr = parsed[0]
+                currSite = parsed[1]
+                currPos = (currChr, currSite)
 
-            #start processing parental genotypes here
-            parent1 = ""
-            parent2 = ""
-            if parsed[9][0] == "1":
-                parent1 = "alt"
-                parent2 = "ref"
-            else:
-                parent1 = "ref"
-                parent2 = "alt"
+                #start processing parental genotypes here
+                parent1 = ""
+                parent2 = ""
+                if parsed[9][0] == "1":
+                    parent1 = "alt"
+                    parent2 = "ref"
+                else:
+                    parent1 = "ref"
+                    parent2 = "alt"
 
-            vcf_repos[currPos] = (parent1, parent2) 
+                vcf_repos[currPos] = (parent1, parent2) 
 
-        line = vcf.readline() 
+            line = vcf.readline() 
+        vcf.close() 
 
-    vcf.close() 
+    except IOError:
+        print "IOError: cannot open " + fileName + "."
+
     return vcf_repos
 
 # load a GATK output file
@@ -58,27 +62,33 @@ def loadGATK():
 ## update GATK dictionary - yup, this works fine as well
 # GATK_repos is in format of (chr, snp) --> (altFreq, rawDepth)
 def updateGATK(fileName):
-    gatk = open(fileName)
     GATK_repos = {}
-    line = gatk.readline()
 
-    while line:
-        if line[1] == "h":
-            parsed = line.split()
-            currChr = parsed[0]
-            currSNP = parsed[1]
-            currPos = (currChr, currSNP)
-            currAltCt = float(parsed[6])
-            currTotalCt = float(parsed[7])
-            currAltFreq = float(0)
-            if currTotalCt != float(0):
-                currAltFreq = currAltCt/currTotalCt
-            currRawDepth = parsed[10]
-            GATK_repos[currPos] = (currAltFreq, currRawDepth)
+    try:
+        gatk = open(fileName)
         line = gatk.readline()
 
-    gatk.close()
-    return GATK_repos
+        while line:
+            if line[1] == "h":
+                parsed = line.split()
+                currChr = parsed[0]
+                currSNP = parsed[1]
+                currPos = (currChr, currSNP)
+                currAltCt = float(parsed[6])
+                currTotalCt = float(parsed[7])
+                currAltFreq = float(0)
+                if currTotalCt != float(0):
+                    currAltFreq = currAltCt/currTotalCt
+                currRawDepth = parsed[10]
+                GATK_repos[currPos] = (currAltFreq, currRawDepth)
+            line = gatk.readline()
+
+        gatk.close()
+
+    except IOError as e:
+        print "I/O error: cannot open " + fileName + "."
+
+    return GATK_repos 
 
 ## get the user's query
 # this should be in format of chr2L:11111111 (split on commas)
@@ -87,7 +97,7 @@ def getQuery():
     query = raw_input("Input your regions of interest (enter ALL if you want to find ALL possible sites): ")
     return query
 
-# function that takes in a string of queries in a particular format
+# function that takes in a string of queries in a particular format - yup, this works! :-)
 # @param a string of queries in format of chr:position,chr:position,...,chr:position
 # @return a set of tuples to be used as keys for both vcf and gatk dictionaries
 def queryToTuple(query):
@@ -95,7 +105,7 @@ def queryToTuple(query):
     # find out how many times to loop and create enough tuples as keys 
     tupleSet = set()
     # we are indexed at 0, so edge case
-    for i in range (0, len(parsedQuery)-1):
+    for i in range (0, len(parsedQuery)):
         preTuple = parsedQuery[i].split(":") 
         currChr = preTuple[0]
         currSNP = preTuple[1]
@@ -103,7 +113,7 @@ def queryToTuple(query):
         tupleSet.add(currPos)
     return tupleSet
 
-# special case of retrieving queries when you want all the sites
+# special case of retrieving queries when you want all the sites - yup, this works! :-)
 # @param GATK repository that has been filled already
 # @return a list of keys as tuples from the GATK dictionary
 def getAllSites(gatk_repos):
@@ -114,16 +124,17 @@ def getAllSites(gatk_repos):
     return tupleSet
 
 # Search for the query and save to a dictionary?
+# TODO: TEST THIS PORTION!!!
 # @param set of tuples, vcf dictionary, and gatk dictionary (I think these are passed by reference)
 # @return a results dictionary of tuples (chr, snp) --> tuple (altFreq, parent, rawDepth)
-def getQueryResults(queryTupleSet, vcf_repos, GATK_repos):
+def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
 
     results_repos = {}
 
     #queryTupleSet contains tuples that are keys compatible with both vcf and GATK dictionaries
     # iterate over query Tuple Set - for each element do the following
     for posit in queryTupleSet:
-
+        # TODO: FIX THE KEYS THAT DON'T EXIST? WHY THE FUCK DON'T ALL KEYS EXIST.
         if posit in vcf_repos.keys() and posit in gatk_repos.keys():
             
             currParAlleles = vcf_repos[posit]
@@ -146,18 +157,20 @@ def getQueryResults(queryTupleSet, vcf_repos, GATK_repos):
         else:
             print "This SNP does not exist in either vcf or gatk files:  " + posit[0] + ": " + posit[1]
 
+        # testing...
+        print posit
+        print results_repos[posit]
+        print "\n"
+
     return results_repos
 
-# okay go test this alison wtf
+# okay go test this alison - 65% done 
 # write the query results to a file
 def queryToFile(results_repos):
     file_name = raw_input("Input the name of the output file to write: ")
-
     print contig + "\t" + pos + "\t" + parent + "\t" + altFreq + "\t" + rawDepth + "\n"
-
     for key, value in results_repos:
         print key[0] + "\t" + key[1] + "\t" + results_repos[key][0] + "\t" + results_repos[key][1] + "\t" + results_repos[key][2] + "\n"
-    # okay find the function for writing to file.....
 
 # main - yup this is it!!!
 def main():
@@ -179,22 +192,31 @@ def main():
 
         print "What do you want to do? Enter one of the options"
         print "Upload VCF: V ...  Upload GATK: G ... Calculate Parent Contribution: P ... Write Results: W ... Exit: X ..."
+
         choice = raw_input("Your choice: ")
         if choice == "V":
-            vcf_repos = loadVcf()
+            vcf_repos = loadVCF()
+
         elif choice == "G":
             gatk_repos = loadGATK() 
+
         elif choice == "P":
             query = getQuery()
             if query == "ALL":
-                querySet = getAllSites()
+                if gatk_repos:
+                    querySet = getAllSites(gatk_repos)
+                else:
+                    print "You need to load a GATK output file first before you can inquire on all SNP sites. Please uplaod a GATK file and try again."
             else:
-                querySet == getQueryTuples
+                querySet == queryToTuple(query) 
+            getQueryResults(querySet, vcf_repos, gatk_repos)
+
         elif choice == "X":
             print "Okay, closing FIND PARENTAL CONTRIBUTION"
             break
+
         else:
-            print "Sorry, not an option. Try again."
+            print "Sorry, " + choice + " is not an option. Try again."
 # close
 
 main()
