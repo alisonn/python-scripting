@@ -121,6 +121,7 @@ def getAllSites(gatk_repos):
     tupleSet = set() 
     for key in gatk_repos:
         tupleSet.add(key)
+    print "There are " + str(len(tupleSet)) + " elements in your query search!"
     return tupleSet
 
 # Search for the query and save to a dictionary?
@@ -128,14 +129,13 @@ def getAllSites(gatk_repos):
 # @param set of tuples, vcf dictionary, and gatk dictionary (I think these are passed by reference)
 # @return a results dictionary of tuples (chr, snp) --> tuple (altFreq, parent, rawDepth)
 def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
-
+    count = 0
     results_repos = {}
-
     #queryTupleSet contains tuples that are keys compatible with both vcf and GATK dictionaries
     # iterate over query Tuple Set - for each element do the following
     for posit in queryTupleSet:
         # TODO: FIX THE KEYS THAT DON'T EXIST? WHY THE FUCK DON'T ALL KEYS EXIST.
-        if posit in vcf_repos.keys() and posit in gatk_repos.keys():
+        if (posit in vcf_repos.keys()) and (posit in gatk_repos.keys()):
             
             currParAlleles = vcf_repos[posit]
             currAltFreq = gatk_repos[posit][0]
@@ -145,10 +145,10 @@ def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
             if currAltFreq == float(0.5):
                 results_repos[posit] = (float(1.5), float(currAltFreq), float(currRawDepth))
 
-            elif (currAltFreq > float(0.5) and gatk_repos[0] == "alt") or (currAltFreq < 0.5 and gatk_repos[0] == "ref"):
+            elif (currAltFreq > float(0.5) and vcf_repos[posit][0] == "alt") or (currAltFreq < 0.5 and vcf_repos[posit][0] == "ref"):
                 results_repos[posit] = (float(1.0), float(currAltFreq), float(currRawDepth))
 
-            elif (currAltFreq > float(0.5) and gatk_repos[0] == "ref") or (currAltFreq < 0.5 and gatk_repos[0] == "alt"):
+            elif (currAltFreq > float(0.5) and vcf_repos[posit][0] == "ref") or (currAltFreq < 0.5 and vcf_repos[posit][0] == "alt"):
                 results_repos[posit] = (float(2.0), float(currAltFreq), float(currRawDepth))
 
             else:
@@ -158,20 +158,26 @@ def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
             print "This SNP does not exist in either vcf or gatk files:  " + posit[0] + ": " + posit[1]
 
         # testing...
-        print posit
-        print results_repos[posit]
-        print "\n"
-
+        #print posit
+        #print results_repos[posit]
+        #print "\n"
+        count += 1
+        print count
+    print "DONE!"
     return results_repos
 
 # okay go test this alison - 65% done 
 # write the query results to a file
 def queryToFile(results_repos):
     file_name = raw_input("Input the name of the output file to write: ")
-    print contig + "\t" + pos + "\t" + parent + "\t" + altFreq + "\t" + rawDepth + "\n"
+    f = open(file_name, 'w')
+    f.write("contig \t pos \t parent \t altFreq \t rawDepth \n")
     for key, value in results_repos:
-        print key[0] + "\t" + key[1] + "\t" + results_repos[key][0] + "\t" + results_repos[key][1] + "\t" + results_repos[key][2] + "\n"
+        line = str(key[0]) + "\t" + str(key[1]) + "\t" + str(results_repos[key][0]) + "\t" + str(results_repos[key][1]) + "\t" + str(results_repos[key][2]) + "\n"
 
+        f.write(line)
+
+    f.close()
 # main - yup this is it!!!
 def main():
     # initialize the variables
@@ -209,7 +215,7 @@ def main():
                     print "You need to load a GATK output file first before you can inquire on all SNP sites. Please uplaod a GATK file and try again."
             else:
                 querySet == queryToTuple(query) 
-            getQueryResults(querySet, vcf_repos, gatk_repos)
+            results_repos = getQueryResults(querySet, vcf_repos, gatk_repos)
 
         elif choice == "X":
             print "Okay, closing FIND PARENTAL CONTRIBUTION"
