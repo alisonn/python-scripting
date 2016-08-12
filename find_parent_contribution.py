@@ -6,6 +6,7 @@
 # Output: If you prompt - a .csv file with regions of interest and the main contributing parent per region/SNP
 
 import sys
+import argparse
 
 # load an initial VCF file
 def loadVCF():
@@ -129,12 +130,11 @@ def getAllSites(gatk_repos):
 # @param set of tuples, vcf dictionary, and gatk dictionary (I think these are passed by reference)
 # @return a results dictionary of tuples (chr, snp) --> tuple (altFreq, parent, rawDepth)
 def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
-    count = 0
     results_repos = {}
     #queryTupleSet contains tuples that are keys compatible with both vcf and GATK dictionaries
     # iterate over query Tuple Set - for each element do the following
     for posit in queryTupleSet:
-        # TODO: FIX THE KEYS THAT DON'T EXIST? WHY THE FUCK DON'T ALL KEYS EXIST.
+        # TODO: FIX THE KEYS THAT DON'T EXIST?
         if (posit in vcf_repos.keys()) and (posit in gatk_repos.keys()):
             
             currParAlleles = vcf_repos[posit]
@@ -157,12 +157,6 @@ def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
         else:
             print "This SNP does not exist in either vcf or gatk files:  " + posit[0] + ": " + posit[1]
 
-        # testing...
-        #print posit
-        #print results_repos[posit]
-        #print "\n"
-        count += 1
-        print count
     print "DONE!"
     return results_repos
 
@@ -172,21 +166,21 @@ def queryToFile(results_repos):
     file_name = raw_input("Input the name of the output file to write: ")
     f = open(file_name, 'w')
     f.write("contig \t pos \t parent \t altFreq \t rawDepth \n")
-    for key, value in results_repos:
+    for key in results_repos:
         line = str(key[0]) + "\t" + str(key[1]) + "\t" + str(results_repos[key][0]) + "\t" + str(results_repos[key][1]) + "\t" + str(results_repos[key][2]) + "\n"
-
         f.write(line)
 
     f.close()
 # main - yup this is it!!!
-def main():
+def mainUI():
     # initialize the variables
     vcf_repos = {}
     gatk_repos = {}
     results_repos = {}
     query = ""
     querySet = set()
-    
+
+    #header    
     print "\n"
     print "#####################################"
     print "WELCOME TO FIND PARENTAL CONTRIBUTION"
@@ -214,8 +208,11 @@ def main():
                 else:
                     print "You need to load a GATK output file first before you can inquire on all SNP sites. Please uplaod a GATK file and try again."
             else:
-                querySet == queryToTuple(query) 
+                querySet = queryToTuple(query) 
             results_repos = getQueryResults(querySet, vcf_repos, gatk_repos)
+
+        elif choice == "W":
+            queryToFile(results_repos) #returns nothing, writes a file out
 
         elif choice == "X":
             print "Okay, closing FIND PARENTAL CONTRIBUTION"
@@ -224,5 +221,23 @@ def main():
         else:
             print "Sorry, " + choice + " is not an option. Try again."
 # close
+mainUI()
 
-main()
+def mainCmdLine():
+    #initialize the variables again...
+    vcf_repos = {}
+    gatk_repos = {}
+    results_repos = {}
+    query = ""
+    querySet = set()
+
+    vcf_repos = loadVCF()# redo load and every other function so that they take in file names as arguments..
+    # makes implementing the cmd line easier without dupicating functions 
+    gatk_repos = loadGATK()
+    query = arg[1]
+    if query == "ALL":
+        getAllSites(gatk_repos)
+    else:
+        querySet = queryToTuple(query)
+    results_repos = getQueryResults(querySet, vcf_repos, gatk_repos)
+    queryToFile(results_repos)
