@@ -9,9 +9,9 @@ import sys
 import argparse
 
 # load an initial VCF file
-def loadVCF():
-    vcf_file = raw_input("Input the path to your VCF File: ")
-    return updateVCF(vcf_file)
+def loadVCF(VCF_file_path):
+#VCF_file_path = raw_input("Input the path to your VCF File: ")
+    return updateVCF(VCF_file_path)
 
 # update VCF dictionary: yup, this works! tuple --> tuple
 # @param: path to vcf file
@@ -56,8 +56,8 @@ def updateVCF(fileName):
     return vcf_repos
 
 # load a GATK output file
-def loadGATK():
-    GATK_file_path = raw_input("Input the path to your GATK output file (.csv): ")
+def loadGATK(GATK_file_path):
+# GATK_file_path = raw_input("Input the path to your GATK output file (.csv): ")
     return updateGATK(GATK_file_path)
 
 ## update GATK dictionary - yup, this works fine as well
@@ -160,17 +160,37 @@ def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
     print "DONE!"
     return results_repos
 
-# okay go test this alison - 65% done 
 # write the query results to a file
-def queryToFile(results_repos):
-    file_name = raw_input("Input the name of the output file to write: ")
+def queryToFile(results_repos, file_name):
+#    file_name = raw_input("Input the name of the output file to write: ")
     f = open(file_name, 'w')
     f.write("contig \t pos \t parent \t altFreq \t rawDepth \n")
     for key in results_repos:
         line = str(key[0]) + "\t" + str(key[1]) + "\t" + str(results_repos[key][0]) + "\t" + str(results_repos[key][1]) + "\t" + str(results_repos[key][2]) + "\n"
         f.write(line)
-
     f.close()
+
+# prints out the header
+def printHeader():
+    #header
+    print "\n\n"
+    print "#####################################"
+    print "     FIND PARENTAL CONTRIBUTION      "
+    print "#####################################\n\n"
+    print "This program calculates parental contributions to allelic imbalance in NGS data."
+    print "You will need VCF and GATK files for each sample\n"
+
+# specifies required inputs for processing
+# @return: object whose attributes are the different inputs for main 
+def getArgs():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("vcf_file")
+    parser.add_argument("gatk_file")
+    parser.add_argument("--query", "-q", type=str, default="ALL", help="Default is all sites from GATK")
+    parser.add_argument("out_file")
+    args = parser.parse_args()
+    return args 
+
 # main - yup this is it!!!
 def mainUI():
     # initialize the variables
@@ -180,13 +200,7 @@ def mainUI():
     query = ""
     querySet = set()
 
-    #header    
-    print "\n"
-    print "#####################################"
-    print "WELCOME TO FIND PARENTAL CONTRIBUTION"
-    print "#####################################" + "\n"
-    print "This program calculates parental contributions to allelic imbalance in NGS data."
-    print "You will need VCF and GATK files for each sample." + "\n"
+    printHeader()
 
     while True:
 
@@ -195,10 +209,12 @@ def mainUI():
 
         choice = raw_input("Your choice: ")
         if choice == "V":
-            vcf_repos = loadVCF()
+            vcf_path = raw_input("Path to VCF file:")
+            vcf_repos = loadVCF(vcf_path)
 
         elif choice == "G":
-            gatk_repos = loadGATK() 
+            gatk_path = raw_input("Path to GATK file:")
+            gatk_repos = loadGATK(gatk_path) 
 
         elif choice == "P":
             query = getQuery()
@@ -221,8 +237,10 @@ def mainUI():
         else:
             print "Sorry, " + choice + " is not an option. Try again."
 # close
-mainUI()
+#mainUI()
 
+# need 4 arguments: VCF_path, GATK_path, query, file_out
+# easier for command line handling
 def mainCmdLine():
     #initialize the variables again...
     vcf_repos = {}
@@ -231,13 +249,18 @@ def mainCmdLine():
     query = ""
     querySet = set()
 
-    vcf_repos = loadVCF()# redo load and every other function so that they take in file names as arguments..
-    # makes implementing the cmd line easier without dupicating functions 
-    gatk_repos = loadGATK()
-    query = arg[1]
+    printHeader()
+    args = getArgs()
+
+    vcf_repos = loadVCF(args.vcf_file)
+    gatk_repos = loadGATK(args.gatk_file)
+    query = args.query
     if query == "ALL":
-        getAllSites(gatk_repos)
+        querySet = getAllSites(gatk_repos)
     else:
         querySet = queryToTuple(query)
     results_repos = getQueryResults(querySet, vcf_repos, gatk_repos)
-    queryToFile(results_repos)
+    queryToFile(results_repos, args.file_out)
+
+# close
+mainCmdLine()
