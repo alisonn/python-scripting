@@ -10,7 +10,6 @@ import argparse
 
 # load an initial VCF file
 def loadVCF(VCF_file_path):
-#VCF_file_path = raw_input("Input the path to your VCF File: ")
     return updateVCF(VCF_file_path)
 
 # update VCF dictionary: yup, this works! tuple --> tuple
@@ -57,7 +56,6 @@ def updateVCF(fileName):
 
 # load a GATK output file
 def loadGATK(GATK_file_path):
-# GATK_file_path = raw_input("Input the path to your GATK output file (.csv): ")
     return updateGATK(GATK_file_path)
 
 ## update GATK dictionary - yup, this works fine as well
@@ -164,7 +162,8 @@ def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
 def queryToFile(results_repos, file_name):
 #    file_name = raw_input("Input the name of the output file to write: ")
     f = open(file_name, 'w')
-    f.write("contig \t pos \t parent \t altFreq \t rawDepth \n")
+    f.write("# parent: (1.0=leftmost parent from VCF, 2.0=rightmost parent from VCF, 1.5=both parents, 0.0=no information)\n")
+    f.write("contig\tpos\tparent\taltFreq\trawDepth\n")
     for key in results_repos:
         line = str(key[0]) + "\t" + str(key[1]) + "\t" + str(results_repos[key][0]) + "\t" + str(results_repos[key][1]) + "\t" + str(results_repos[key][2]) + "\n"
         f.write(line)
@@ -260,7 +259,7 @@ def mainCmdLine():
     else:
         querySet = queryToTuple(query)
     results_repos = getQueryResults(querySet, vcf_repos, gatk_repos)
-    queryToFile(results_repos, args.file_out)
+    queryToFile(results_repos, args.out_file)
 
 # close
 mainCmdLine()
