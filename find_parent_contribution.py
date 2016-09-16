@@ -197,54 +197,6 @@ def getArgs():
     args = parser.parse_args()
     return args 
 
-# main - yup this is it!!!
-def mainUI():
-    # initialize the variables
-    vcf_repos = {}
-    gatk_repos = {}
-    results_repos = {}
-    query = ""
-    querySet = set()
-
-    printHeader()
-
-    while True:
-
-        print "What do you want to do? Enter one of the options"
-        print "Upload VCF: V ...  Upload GATK: G ... Calculate Parent Contribution: P ... Write Results: W ... Exit: X ..."
-
-        choice = raw_input("Your choice: ")
-        if choice == "V":
-            vcf_path = raw_input("Path to VCF file:")
-            vcf_repos = loadVCF(vcf_path)
-
-        elif choice == "G":
-            gatk_path = raw_input("Path to GATK file:")
-            gatk_repos = loadGATK(gatk_path) 
-
-        elif choice == "P":
-            query = getQuery()
-            if query == "ALL":
-                if gatk_repos:
-                    querySet = getAllSites(gatk_repos)
-                else:
-                    print "You need to load a GATK output file first before you can inquire on all SNP sites. Please uplaod a GATK file and try again."
-            else:
-                querySet = queryToTuple(query) 
-            results_repos = getQueryResults(querySet, vcf_repos, gatk_repos)
-
-        elif choice == "W":
-            queryToFile(results_repos) #returns nothing, writes a file out
-
-        elif choice == "X":
-            print "Okay, closing FIND PARENTAL CONTRIBUTION"
-            break
-
-        else:
-            print "Sorry, " + choice + " is not an option. Try again."
-# close
-#mainUI()
-
 # need 4 arguments: VCF_path, GATK_path, query, file_out
 # easier for command line handling
 def mainCmdLine():
