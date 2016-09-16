@@ -5,8 +5,14 @@
 # User Input: Regions of interest to asses parental contribution
 # Output: If you prompt - a .csv file with regions of interest and the main contributing parent per region/SNP
 
+
+# Need binomial from scipy and argparse for parameter import
 import sys
 import argparse
+import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from scipy import stats
 
 # load an initial VCF file
 def loadVCF(VCF_file_path):
@@ -67,6 +73,8 @@ def updateGATK(fileName):
         gatk = open(fileName)
         line = gatk.readline()
 
+
+# what you want is chr, pos --> currAltFreq (in case), altAlleleCt, readDepth
         while line:
             if line[1] == "h":
                 parsed = line.split()
@@ -79,7 +87,7 @@ def updateGATK(fileName):
                 if currTotalCt != float(0):
                     currAltFreq = currAltCt/currTotalCt
                 currRawDepth = parsed[10]
-                GATK_repos[currPos] = (currAltFreq, currRawDepth)
+                GATK_repos[currPos] = (currAltFreq, currAltCt, currRawDepth)
             line = gatk.readline()
 
         gatk.close()
@@ -123,8 +131,6 @@ def getAllSites(gatk_repos):
     print "There are " + str(len(tupleSet)) + " elements in your query search!"
     return tupleSet
 
-# Search for the query and save to a dictionary?
-# TODO: TEST THIS PORTION!!!
 # @param set of tuples, vcf dictionary, and gatk dictionary (I think these are passed by reference)
 # @return a results dictionary of tuples (chr, snp) --> tuple (altFreq, parent, rawDepth)
 def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
@@ -132,25 +138,26 @@ def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
     #queryTupleSet contains tuples that are keys compatible with both vcf and GATK dictionaries
     # iterate over query Tuple Set - for each element do the following
     for posit in queryTupleSet:
-        # TODO: FIX THE KEYS THAT DON'T EXIST?
         if (posit in vcf_repos.keys()) and (posit in gatk_repos.keys()):
             
             currParAlleles = vcf_repos[posit]
             currAltFreq = gatk_repos[posit][0]
-            currRawDepth = gatk_repos[posit][1] 
+            currAltCt = gatk_repos[posit][1]
+            currRawDepth = gatk_repos[posit][2] 
 
-            # 1 = parent 1 , 2 = parent 2, 1.5 = no imbalance, 0.0 = no information
-            if currAltFreq == float(0.5):
-                results_repos[posit] = (float(1.5), float(currAltFreq), float(currRawDepth))
-
-            elif (currAltFreq > float(0.5) and vcf_repos[posit][0] == "alt") or (currAltFreq < 0.5 and vcf_repos[posit][0] == "ref"):
-                results_repos[posit] = (float(1.0), float(currAltFreq), float(currRawDepth))
-
-            elif (currAltFreq > float(0.5) and vcf_repos[posit][0] == "ref") or (currAltFreq < 0.5 and vcf_repos[posit][0] == "alt"):
-                results_repos[posit] = (float(2.0), float(currAltFreq), float(currRawDepth))
-
+            #TODO: Test the scipy package with binom_test()
+            # do binomial test per snp site
+            if currRawDepth == float(0):
+                currPval = float(1)
             else:
-                results_repos[posit] = (float(0), float(currAltFreq), float(currRawDepth))
+                currPval =  scipy.stats.binom_test(currAltCt, currRawDepth, p = 0.5)
+
+            # only report who is the parent with alternate allele
+            if vcf_repos[posit][0] == "alt":
+                currAltParent = "1"
+            else:
+                currAltParent = "2"
+            results_repos[posit] = (currAltFreq, currPval, currAltCt, currRawDepth, currAltParent)
 
         else:
             print "This SNP does not exist in either vcf or gatk files:  " + posit[0] + ": " + posit[1]
@@ -163,9 +170,9 @@ def queryToFile(results_repos, file_name):
 #    file_name = raw_input("Input the name of the output file to write: ")
     f = open(file_name, 'w')
     f.write("# parent: (1.0=leftmost parent from VCF, 2.0=rightmost parent from VCF, 1.5=both parents, 0.0=no information)\n")
-    f.write("contig\tpos\tparent\taltFreq\trawDepth\n")
+    f.write("contig\tpos\taltFreq\tp-value\taltCount\treadDepth\taltParent\n")
     for key in results_repos:
-        line = str(key[0]) + "\t" + str(key[1]) + "\t" + str(results_repos[key][0]) + "\t" + str(results_repos[key][1]) + "\t" + str(results_repos[key][2]) + "\n"
+        line = str(key[0]) + "\t" + str(key[1]) + "\t" + str(results_repos[key][0]) + "\t" + str(results_repos[key][1]) + "\t" + str(results_repos[key][2]) + "\t" + str(results_repos[key][3]) + "\t" + str(results_repos[key][4]) +  "\n"
         f.write(line)
     f.close()
 
