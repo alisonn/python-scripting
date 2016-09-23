@@ -10,8 +10,6 @@
 import sys
 import argparse
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 from scipy import stats
 
 # load an initial VCF file
@@ -150,7 +148,7 @@ def getQueryResults(queryTupleSet, vcf_repos, gatk_repos):
             if currRawDepth == float(0):
                 currPval = float(1)
             else:
-                currPval =  scipy.stats.binom_test(currAltCt, currRawDepth, p = 0.5)
+                currPval =  stats.binom_test(currAltCt, currRawDepth, p = 0.5)
 
             # only report who is the parent with alternate allele
             if vcf_repos[posit][0] == "alt":
