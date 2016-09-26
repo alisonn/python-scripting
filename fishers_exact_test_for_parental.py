@@ -1,9 +1,11 @@
-#!/bin/env python
+#!/usr/bin/env python
 
 # Fishers Exact Test for Parental Alleles: Creates 2x2 contingency tables with parental_contribution_v2.py output and
 # calculates p-value and oddsratio when data are sorted into Quartile1: Summer+Parent1, Q2: Summer+Parent2; Q3: Winter+Parent1, Q4: Winter+Parent2
 # positional arguments -1 original vcf file -2 non-starved rep1 -3 non-starved rep2 -4 starved rep1 -5 starved rep2 -6 output in format "chr, pos, pvalue, oddsratio, Q1-Q4"
 
+# TODO - figure out how to normalize readDepth across all samples to prevent overestimates/bias
+# calculate readDepth of each sample?
 
 # we need argparse for positional arguments
 # need numpy and scipy for stats.fisher_exact([table])
@@ -15,12 +17,12 @@ from scipy import stats
 # There are 2 dictionaries/mappings: (1) Treatment 1 Parental AI (2) Treatment 2 Parental AI 
 
 # so that I don't have to rewrite parsed line shit over again
-def getInfoFromLine (line)
+def getInfoFromLine (line):
     parsed = line.split()
     chrom = parsed[0]
     snp = parsed[1]
     altCt = parsed[4]
-    refCt = parsed[5] - AltCt
+    refCt = parsed[5] - altCt
     altPar = parsed[6]
     numReps = [1] # default
     pos = (chrom, snp)
@@ -30,7 +32,7 @@ def getInfoFromLine (line)
     return result
 
 # read in the parental alleles into dictionary and return dictionary to user
-def loadParentCont (aiFile)
+def loadParentCont (aiFile):
     print "Initiating a repository with parental allelic imbalance information\n"
     ai_repos = {}
     try:
@@ -39,14 +41,16 @@ def loadParentCont (aiFile)
         line = ai.readline()
         while line:
             if line[0] == "c":
-            # tuple to tuple of tuples i.e. [chr, pos] -->  [altCount, readDepth, AltParent]
-            currInfo = getInfoFromLine(line)
-            ai_repos[currInfo[0]] = currInfo[1] 
-
+                # tuple to tuple of tuples i.e. [chr, pos] -->  [altCount, readDepth, AltParent]
+                currInfo = getInfoFromLine(line)
+                ai_repos[currInfo[0]] = currInfo[1] 
             line = ai.readline()
+
         ai.close()
+
     except IOError as e:
         print "I/O error: cannot open " + aiFile + "."
+
     return ai_repos
 
 # update the repository with replicate information
@@ -65,16 +69,17 @@ def updateRepos (ai_repos, repFile):
             if currPos in repos:
                 ai_repos[currPos][0] += currInfo[0]
                 ai_repos[currPos][1] += currInfo[1]
-                ai_repos[currPos[2] += 1 # this snp site contains info from 2 replicates
+                ai_repos[currPos][2] += 1 # this snp site contains info from 2 replicates
             # otherwise tag on another key --> info
             else:
                 ai_repos[currPos] = currInfo
-    except IOError as:
+        rep.close()
+    except IOError as e:
         print "I/O error: cannot open " + repFile + "."
     return repos
 
 # conducts fisher's exact test and returns a line to print
-def getResults(currSNP, nonStarv_repos, starv_repos)
+def getResults(currSNP, nonStarv_repos, starv_repos):
     result = ""
     # assuming everything works perfectly (i.e. snp exists in both gatk-parent files)
     if currSNP in nonStarv_repos and currSNP in starv_repos:
@@ -111,6 +116,8 @@ def printResults(vcf, nonStarv_repos, starv_repos, output):
         out.write(resultToPrint)
         line = vcf.readline()
 
+    vcf.close()
+    out.close()
     #done - nothing to return
 
 def getArgs():
@@ -125,7 +132,7 @@ def getArgs():
     return args
 
 def printHeader():
-    print "#########################################\n" 
+    print "\n\n#########################################\n" 
     print "FISHER'S EXACT TEST FOR ALLELIC IMBALANCE\n"
     print "#########################################\n\n"
 
@@ -143,5 +150,5 @@ def main():
     
     printResults(args.vcf_file, nonStarv_repos, starv_repos, args.output_file)
 
-# main()
+main()
 # close
