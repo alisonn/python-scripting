@@ -21,10 +21,10 @@ def getInfoFromLine (line):
     parsed = line.split()
     chrom = parsed[0]
     snp = parsed[1]
-    altCt = parsed[4]
-    refCt = parsed[5] - altCt
-    altPar = parsed[6]
-    numReps = [1] # default
+    altCt = float(parsed[4])
+    refCt = float(parsed[5]) - float(altCt)
+    altPar = float(parsed[6])
+    numReps = float(1) # default
     pos = (chrom, snp)
     posInfo = (altCt, refCt, altPar, numReps)
     result = (pos, posInfo)
@@ -40,7 +40,7 @@ def loadParentCont (aiFile):
         ai = open(aiFile)
         line = ai.readline()
         while line:
-            if line[0] == "c":
+            if line[1] == "h":
                 # tuple to tuple of tuples i.e. [chr, pos] -->  [altCount, readDepth, AltParent]
                 currInfo = getInfoFromLine(line)
                 ai_repos[currInfo[0]] = currInfo[1] 
@@ -58,25 +58,29 @@ def updateRepos (ai_repos, repFile):
     print "Updating a repository with replicate information \n"
     try:
         rep = open(repFile)
-        line = ai.readline()
+        line = rep.readline()
         while line:
-
-            repInfo = getInfoFromLine(line)
-            currPos = repInfo[0]
-            currInfo = repInfo[1]
-            # add to the altCt with the replicate info
-            # if the snp is identified in both reps
-            if currPos in repos:
-                ai_repos[currPos][0] += currInfo[0]
-                ai_repos[currPos][1] += currInfo[1]
-                ai_repos[currPos][2] += 1 # this snp site contains info from 2 replicates
-            # otherwise tag on another key --> info
-            else:
-                ai_repos[currPos] = currInfo
+            if line[1] == "h":
+                repInfo = getInfoFromLine(line)
+                currPos = repInfo[0]
+                currInfo = repInfo[1]
+                # add to the altCt with the replicate info
+                # if the snp is identified in both reps
+                #tuples are immutable so create a new tuple with entries as sum of prev and new info
+                if currPos in ai_repos:
+                    updatedTuple = (ai_repos[currPos][0]+currInfo[0], ai_repos[currPos][1]+currInfo[1], ai_repos[currPos][2], ai_repos[currPos][3]+float(1))
+                    ai_repos[currPos] = updatedTuple
+#                    ai_repos[currPos][0] += currInfo[0]
+#                    ai_repos[currPos][1] += currInfo[1]
+#                    ai_repos[currPos][2] += 1 # this snp site contains info from 2 replicates
+                # otherwise tag on another key --> info
+                else:
+                    ai_repos[currPos] = currInfo
+            line = rep.readline()
         rep.close()
     except IOError as e:
         print "I/O error: cannot open " + repFile + "."
-    return repos
+    return ai_repos
 
 # conducts fisher's exact test and returns a line to print
 def getResults(currSNP, nonStarv_repos, starv_repos):
@@ -85,21 +89,19 @@ def getResults(currSNP, nonStarv_repos, starv_repos):
     if currSNP in nonStarv_repos and currSNP in starv_repos:
         fishers_row1 = [nonStarv_repos[currSNP][0], nonStarv_repos[currSNP][1]]
         fishers_row2 = [starv_repos[currSNP][0], starv_repos[currSNP][1]]
-        oddsRatio, pval = stats.fishers_exact([fishers_row1, fishers_row2]) 
-        result = currSNP[0] + "\t" + currSNP[1] + "\t" + oddsRatio + "\t" + pval + "\t" + fishers_row1[0] + "\t" + fishers_row1[1] + "\t" + fishers_row2[0] + "\t" + fishers_row2[1] + "\t" + nonStarv_repos[currSNP][3] + "\t" + starv_repos[currSNP][3] + "\n"
+        oddsRatio, pval = stats.fisher_exact([fishers_row1, fishers_row2]) 
+        result = currSNP[0] + "\t" + currSNP[1] + "\t" + str(oddsRatio) + "\t" + str(pval) + "\t" + str(fishers_row1[0]) + "\t" + str(fishers_row1[1]) + "\t" + str(fishers_row2[0]) + "\t" + str(fishers_row2[1]) + "\t" + str(nonStarv_repos[currSNP][3]) + "\t" + str(starv_repos[currSNP][3]) + "\n"
     # if the snp doesn't exist in one of the dictionaries
-    elif currSNP not in nonStarv_repos:
-        result = currSNP[0] + "\t" + currSNP[1] + "\tNA\tNA\t" + nonStarv_repos[currSNP][0] + "\t" + nonStarv_repos[currSNP][1] + "\tNA\tNA\t" + nonStarv_repos[currSNP][3] + "\tNA\n"
+    elif currSNP not in starv_repos and currSNP not in nonStarv_repos:
+        result = currSNP[0] + "\t" + currSNP[1] + "\tNA\tNA\tNA\tNA\tNA\tNA\t0\t0\n"
     elif currSNP not in starv_repos:
-        result = currSNP[0] + "\t" + currSNP[1] + "\tNA\tNA\tNA\tNA\t" + starv_repos[currSNP][0] + "\t" + starv_repos[currSNP][1] + "\tNA\t" + starv_repos[currSNP][3] + "\n" 
-
-    # if the snp does not exist in either dictionary
-    else:
-        result = currSNP[0] + "\t" + currSNP[1] + "\tNA\tNA\tNA\tNA\tNA\tNA\t0\t0\n" 
+        result = str(currSNP[0]) + "\t" + str(currSNP[1]) + "\tNA\tNA\t" + str(nonStarv_repos[currSNP][0]) + "\t" + str(nonStarv_repos[currSNP][1]) + "\tNA\tNA\t" + str(nonStarv_repos[currSNP][3]) + "\tNA\n"
+    elif currSNP not in nonStarv_repos:
+        result = str(currSNP[0]) + "\t" + str(currSNP[1]) + "\tNA\tNA\tNA\tNA\t" + str(starv_repos[currSNP][0]) + "\t" + str(starv_repos[currSNP][1]) + "\tNA\t" + str(starv_repos[currSNP][3]) + "\n" 
 
     return result
 
-def printResults(vcf, nonStarv_repos, starv_repos, output):
+def printResults(vcf_file, nonStarv_repos, starv_repos, output):
 
     print "Computing fisher's exact test and printing results to file . . . \n"
     vcf = open(vcf_file)
@@ -107,13 +109,16 @@ def printResults(vcf, nonStarv_repos, starv_repos, output):
     out = open(output, 'w')
     out.write("# parent 1.0 = summer; parent 2.0 = winter\n")
     out.write("# contig\tpos\toddsRatio\tpval\tNS_Par1\tNS_Par2\tS_Par1\tS_Par2\tnumRepsNS\tnumRepsS\n")
+    print "Output header written\n"
     line = vcf.readline() 
     
     while line:
-        vcfPosition = getInfoFromLine(line)
-        currSNP = vcfPosition[0]
-        resultToPrint = getResults(currSNP, nonStarv_repos, starv_repos) 
-        out.write(resultToPrint)
+        if line[0] != "#" or line[1] == "h":
+            currSNP = (line.split()[0], line.split()[1])
+#            vcfPosition = getInfoFromLine(line)
+#            currSNP = vcfPosition[0]
+            resultToPrint = getResults(currSNP, nonStarv_repos, starv_repos) 
+            out.write(resultToPrint)
         line = vcf.readline()
 
     vcf.close()
@@ -145,7 +150,7 @@ def main():
     #TODO test if this works...
     starv_repos = loadParentCont(args.envA_rep1)
     starv_repos = updateRepos(starv_repos,args.envA_rep2)
-    nonStarv_repos = loadParent(args.envB_rep1)
+    nonStarv_repos = loadParentCont(args.envB_rep1)
     nonStarv_repos = updateRepos(nonStarv_repos, args.envB_rep2)
     
     printResults(args.vcf_file, nonStarv_repos, starv_repos, args.output_file)
